@@ -11,13 +11,13 @@ namespace BetterInspectorCheckbox;
 
 public class BetterInspectorCheckbox : ResoniteMod
 {
-    internal const string VERSION_CONSTANT = "1.0.0";
+    internal const string VERSION_CONSTANT = "1.0.1";
     public override string Name => "BetterInspectorCheckbox";
     public override string Author => "NepuShiro";
     public override string Version => VERSION_CONSTANT;
     public override string Link => "https://github.com/NepuShiro/BetterInspectorCheckbox/";
 
-    [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> Checkbox = new ModConfigurationKey<bool>("Checkbox", "Disable the Checkbox?", () => true);
+    [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> Checkbox = new ModConfigurationKey<bool>("Checkbox", "Enable the Checkbox?", () => true);
     [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> BetterVisual = new ModConfigurationKey<bool>("BetterVisual", "Use the better Visual?", () => true);
 
     private static ModConfiguration _config;
