@@ -11,7 +11,7 @@ namespace BetterInspectorCheckbox;
 
 public class BetterInspectorCheckbox : ResoniteMod
 {
-    internal const string VERSION_CONSTANT = "1.0.2";
+    internal const string VERSION_CONSTANT = "1.1.0";
     public override string Name => "BetterInspectorCheckbox";
     public override string Author => "NepuShiro";
     public override string Version => VERSION_CONSTANT;
@@ -19,6 +19,10 @@ public class BetterInspectorCheckbox : ResoniteMod
 
     [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> Checkbox = new ModConfigurationKey<bool>("Checkbox", "Enable the Checkbox?", () => true);
     [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> BetterVisual = new ModConfigurationKey<bool>("BetterVisual", "Use the better Visual?", () => true);
+    [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> RightAlign = new ModConfigurationKey<bool>("RightAlign", "Right Align the checkbox?", () => false);
+
+    [AutoRegisterConfigKey] private static readonly ModConfigurationKey<bool> RunInUpdates = new ModConfigurationKey<bool>("RunInUpdates", "RunInUpdates? Use this if you're having issues with it not applying", () => false);
+    [AutoRegisterConfigKey] private static readonly ModConfigurationKey<int> RunInUpdatesAmount = new ModConfigurationKey<int>("RunInUpdates Amount", "Amount of updates to wait", () => 1);
 
     private static ModConfiguration _config;
 
@@ -34,11 +38,55 @@ public class BetterInspectorCheckbox : ResoniteMod
     [HarmonyPatch(typeof(SlotInspector), "OnChanges")]
     public static class SlotInspector_Patch
     {
-        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        public static void Postfix(SlotInspector __instance)
+        {
+            SceneInspector inspector = __instance.Slot.GetComponentInParents<SceneInspector>();
+
+            User userByAllocationID = inspector?.Slot.World.GetUserByAllocationID(inspector.Slot.ReferenceID.User);
+            if (userByAllocationID == null || userByAllocationID != inspector.Slot.LocalUser) return;
+
+            if (__instance.Slot.ChildrenCount <= 0) return;
+
+            if (_config.GetValue(RunInUpdates) )
+            {
+                __instance.RunInUpdates(_config.GetValue(RunInUpdatesAmount), () => BooleanMemberEditorChanger(__instance));
+            }
+            else
+            {
+                BooleanMemberEditorChanger(__instance);
+            }
+        }
+
+        private static void BooleanMemberEditorChanger(SlotInspector instance)
+        {
+            Slot panel = instance.Slot[0]?.FindChild("Panel");
+            if (panel != null)
+            {
+                if (!_config.GetValue(Checkbox))
+                {
+                    panel.Destroy();
+                }
+                else if (_config.GetValue(BetterVisual))
+                {
+                    LayoutElement element = panel.GetComponent<LayoutElement>();
+                    element.MinWidth.Value = 24;
+                    element.MinHeight.Value = 24;
+                    element.FlexibleHeight.Value = 1f;
+                }
+            }
+
+            Slot text = instance.Slot[0]?.FindChild("Text");
+            if (text != null && !_config.GetValue(RightAlign))
+            {
+                text.OrderOffset = 1L;
+            }
+        }
+
+        /*public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             FieldInfo rootSlot = AccessTools.Field(typeof(SlotInspector), "_rootSlot");
             MethodInfo booleanEditor = AccessTools.Method(typeof(UIBuilderEditors), nameof(UIBuilderEditors.BooleanMemberEditor), new Type[] { typeof(UIBuilder), typeof(IField), typeof(string) });
-            MethodInfo customMethod = AccessTools.Method(typeof(SlotInspector_Patch), nameof(SlotInspector_Patch.BooleanMemberEditorChanger));
+            // MethodInfo customMethod = AccessTools.Method(typeof(SlotInspector_Patch), nameof(SlotInspector_Patch.BooleanMemberEditorChanger));
 
             CodeMatcher matcher = new CodeMatcher(instructions, generator);
             matcher.MatchStartForward(new CodeMatch(OpCodes.Ldloc_0), new CodeMatch(OpCodes.Ldarg_0), new CodeMatch(OpCodes.Ldfld, rootSlot));
@@ -49,12 +97,12 @@ public class BetterInspectorCheckbox : ResoniteMod
 
             int end = matcher.Pos + 1;
 
-            matcher.Start().Advance(start).RemoveInstructions(end - start).Insert(new CodeInstruction(OpCodes.Ldloc_0), new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Call, customMethod));
+            matcher.Start().Advance(start).RemoveInstructions(end - start) /*.Insert(new CodeInstruction(OpCodes.Ldloc_0), new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Call, customMethod))#1#;
 
             return matcher.InstructionEnumeration();
-        }
+        }*/
 
-        public static void BooleanMemberEditorChanger(UIBuilder uIBuilder, SlotInspector inspector)
+        /*public static void BooleanMemberEditorChanger(UIBuilder uIBuilder, SlotInspector inspector)
         {
             if (!_config.GetValue(Checkbox)) return;
 
@@ -68,7 +116,6 @@ public class BetterInspectorCheckbox : ResoniteMod
             }
 
             uIBuilder.BooleanMemberEditor(rootSlot.Target.ActiveSelf_Field);
-            uIBuilder.Style.FlexibleWidth = 100f;
-        }
+        }*/
     }
 }
