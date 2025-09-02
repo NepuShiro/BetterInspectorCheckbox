@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
 using FrooxEngine;
 using FrooxEngine.UIX;
 using HarmonyLib;
@@ -11,7 +8,7 @@ namespace BetterInspectorCheckbox;
 
 public class BetterInspectorCheckbox : ResoniteMod
 {
-    internal const string VERSION_CONSTANT = "1.1.0";
+    internal const string VERSION_CONSTANT = "1.1.1";
     public override string Name => "BetterInspectorCheckbox";
     public override string Author => "NepuShiro";
     public override string Version => VERSION_CONSTANT;
@@ -40,14 +37,16 @@ public class BetterInspectorCheckbox : ResoniteMod
     {
         public static void Postfix(SlotInspector __instance)
         {
-            SceneInspector inspector = __instance.Slot.GetComponentInParents<SceneInspector>();
+            SceneInspector inspector = __instance?.Slot?.GetComponentInParents<SceneInspector>();
+            Slot slot = inspector?.Slot;
 
-            User userByAllocationID = inspector?.Slot.World.GetUserByAllocationID(inspector.Slot.ReferenceID.User);
-            if (userByAllocationID == null || userByAllocationID != inspector.Slot.LocalUser) return;
+            User user = slot?.World?.GetUserByAllocationID(slot.ReferenceID.User);
+            if (user == null) return;
 
-            if (__instance.Slot.ChildrenCount <= 0) return;
+            bool isLocalUser = user.IsLocalUser && user == __instance.World?.LocalUser;
+            if (!isLocalUser) return;
 
-            if (_config.GetValue(RunInUpdates) )
+            if (_config.GetValue(RunInUpdates))
             {
                 __instance.RunInUpdates(_config.GetValue(RunInUpdatesAmount), () => BooleanMemberEditorChanger(__instance));
             }
@@ -59,26 +58,38 @@ public class BetterInspectorCheckbox : ResoniteMod
 
         private static void BooleanMemberEditorChanger(SlotInspector instance)
         {
-            Slot panel = instance.Slot[0]?.FindChild("Panel");
-            if (panel != null)
+            try
             {
-                if (!_config.GetValue(Checkbox))
+                Slot horizontalLayout = instance.Slot.FindChild("Horizontal Layout");
+                if (horizontalLayout == null) return;
+
+                Slot panel = horizontalLayout.FindChild("Panel");
+                if (panel != null)
                 {
-                    panel.Destroy();
+                    if (!_config.GetValue(Checkbox))
+                    {
+                        horizontalLayout.GetComponent<BooleanMemberEditor>()?.Destroy();
+
+                        panel.Destroy();
+                    }
+                    else if (_config.GetValue(BetterVisual))
+                    {
+                        LayoutElement element = panel.GetComponent<LayoutElement>();
+                        element.MinWidth.Value = 24f;
+                        element.MinHeight.Value = 24f;
+                        element.FlexibleHeight.Value = 1f;
+                    }
                 }
-                else if (_config.GetValue(BetterVisual))
+
+                Slot text = horizontalLayout.FindChild("Text");
+                if (text != null && !_config.GetValue(RightAlign))
                 {
-                    LayoutElement element = panel.GetComponent<LayoutElement>();
-                    element.MinWidth.Value = 24;
-                    element.MinHeight.Value = 24;
-                    element.FlexibleHeight.Value = 1f;
+                    text.OrderOffset = 1L;
                 }
             }
-
-            Slot text = instance.Slot[0]?.FindChild("Text");
-            if (text != null && !_config.GetValue(RightAlign))
+            catch (Exception e)
             {
-                text.OrderOffset = 1L;
+                Error(e);
             }
         }
 
