@@ -56,11 +56,11 @@ public class BetterInspectorCheckbox : ResoniteMod
 
         public static void BooleanMemberEditorChanger(UIBuilder uIBuilder, SlotInspector inspector)
         {
-            if (!Checkbox.Value) return;
+            if (!_config.GetValue(Checkbox)) return;
 
             if (inspector.GetSyncMember("_rootSlot") is not SyncRef<Slot> rootSlot) return;
 
-            if (BetterVisual.Value)
+            if (_config.GetValue(BetterVisual))
             {
                 uIBuilder.Style.MinHeight = 24f;
                 uIBuilder.Style.MinWidth = 24f;
