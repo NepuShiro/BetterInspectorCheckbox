@@ -8,7 +8,7 @@ namespace BetterInspectorCheckbox;
 
 public class BetterInspectorCheckbox : ResoniteMod
 {
-    internal const string VERSION_CONSTANT = "1.1.1";
+    internal const string VERSION_CONSTANT = "1.1.2";
     public override string Name => "BetterInspectorCheckbox";
     public override string Author => "NepuShiro";
     public override string Version => VERSION_CONSTANT;
@@ -38,13 +38,12 @@ public class BetterInspectorCheckbox : ResoniteMod
         public static void Postfix(SlotInspector __instance)
         {
             SceneInspector inspector = __instance?.Slot?.GetComponentInParents<SceneInspector>();
-            Slot slot = inspector?.Slot;
+            Slot insSlot = inspector?.Slot;
+            if (insSlot == null) return;
 
-            User user = slot?.World?.GetUserByAllocationID(slot.ReferenceID.User);
-            if (user == null) return;
-
-            bool isLocalUser = user.IsLocalUser && user == __instance.World?.LocalUser;
-            if (!isLocalUser) return;
+            insSlot.ReferenceID.ExtractIDs(out ulong position, out byte allocationId);
+            User user = insSlot.World.GetUserByAllocationID(allocationId);
+            if (user == null || position < user.AllocationIDStart || !user.IsLocalUser && user != insSlot.World.LocalUser) return;
 
             if (_config.GetValue(RunInUpdates))
             {
